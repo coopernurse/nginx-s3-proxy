@@ -11,13 +11,13 @@ mount one from your host.
 
 
 ```
-docker run -p 8000:8000 -v /path/to/nginx.conf:/nginx.conf coopernurse/nginx-s3-proxy 
+docker run -p 8000:8000 -v /path/to/nginx.conf:/nginx.conf coopernurse/nginx-s3-proxy
 ```
 
 If you want to store the cache on the host, bind a path to `/data/cache`:
 
 ```
-docker run -p 8000:8000 -v /path/to/nginx.conf:/nginx.conf -v /my/path:/data/cache coopernurse/nginx-s3-proxy 
+docker run -p 8000:8000 -v /path/to/nginx.conf:/nginx.conf -v /my/path:/data/cache coopernurse/nginx-s3-proxy
 ```
 
 Feel free to alter the `-p` param if you wish to bind the port differently onto the host.
@@ -60,15 +60,13 @@ http {
     server {
         listen     8000;
 
+        aws_access_key your_aws_access_key; # Example AKIDEXAMPLE
+        aws_key_scope scope_of_generated_signing_key; #Example 20150830/us-east-1/service/aws4_request
+        aws_signing_key signing_key_generated_using_script; #Example L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
+        aws_s3_bucket your_s3_bucket;
+
         location / {
             proxy_pass https://your-bucket.s3.amazonaws.com;
-
-            aws_access_key your-access-key;
-            aws_secret_key your-secret-key;
-            s3_bucket your-bucket;
-
-            proxy_set_header Authorization $s3_auth_token;
-            proxy_set_header x-amz-date $aws_date;
 
             proxy_cache        s3cache;
             proxy_cache_valid  200 302  24h;
@@ -77,6 +75,24 @@ http {
 }
 ```
 
+To generate `aws_signing_key` & `aws_key_scope` run the provided standalone python script from the repo
+
+```
+./generate_signing_key -k your-secret-key -r your-aws-region
+```
+
+#### Example:
+```
+./generate_signing_key -k wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY -r us-east-1
+```
+
+**Note :** The signing keys have a validity of just one week. Hence, they need to be refreshed constantly.
+
+To refresh run the signing key command & reload the nginx.
+
+If need more details on usage of nginx aws auth - head to their repo [https://github.com/anomalizer/ngx_aws_auth](ngx_aws_auth) module.
+
+
 Things you want to tweak include:
 
 * proxy_cache_path
@@ -84,8 +100,9 @@ Things you want to tweak include:
   * if you want the cache stored external to the container, alter the path
 * proxy_pass
 * aws_access_key
-* aws_secret_key
-* s3_bucket
+* aws_key_scope
+* aws_signing_key
+* aws_s3_bucket
 * proxy_cache_valid - change 24h to your cache duration as desired.
 
 
